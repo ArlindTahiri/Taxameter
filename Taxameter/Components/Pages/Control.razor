@@ -1,0 +1,63 @@
+﻿@page "/control"
+@using Microsoft.AspNetCore.SignalR.Client;
+@inject NavigationManager Navigation;
+@inject IJSRuntime JS
+@inject HttpClient Http
+@implements IAsyncDisposable
+
+<h1>Steuerung</h1>
+<p>Preis: @currentFare.Fare €</p>
+<p>Kilometer gefahren: @currentFare.KilometerDriven km</p>
+<p>Zeit gefahren: @currentFare.TimeDrivenMinutes min</p>
+<button @onclick="Start">Start</button>
+<button @onclick="Stop">Stopp</button>
+<button @onclick="Reset">Reset</button>
+
+<LiveMap />
+
+@code {
+    private FareInfo? currentFare = new();
+    private HubConnection? connection;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            connection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/taxameterHub"))
+                .Build();
+
+            connection.On<FareInfo>("FareUpdated", (fareInfo) =>
+            {
+                currentFare = fareInfo;
+                InvokeAsync(StateHasChanged);
+            });
+
+            await connection.StartAsync();
+        }
+    }
+
+    private async Task Start()
+    {
+        await Http.PostAsync("/api/taxameter/start", null);
+
+        await JS.InvokeVoidAsync("initTaxameterClient");
+    } 
+
+    private async Task Stop()
+    {
+        await Http.PostAsync("/api/taxameter/stop", null);
+
+        await JS.InvokeVoidAsync("stopTaxameterClient");
+    }
+
+    private async Task Reset() => await Http.PostAsync("/api/taxameter/reset", null);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (connection is not null)
+        {
+            await connection.DisposeAsync();
+        }
+    }
+}

@@ -1,0 +1,51 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+@inject IJSRuntime JS
+
+<div id="map" style="height: 400px;"></div>
+
+@code {
+    private IJSObjectReference? _module;
+
+    private HubConnection? _connection;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./leafletInterop.js");
+            await _module.InvokeVoidAsync("initMap");
+
+            // HubConnection aufbauen
+            _connection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/taxameterHub"))
+                .Build();
+
+            _connection.On<double, double, string>("LocationUpdated", async (lat, lng, timestamp) =>
+            {
+                await UpdatePosition(lat, lng);
+            });
+
+
+            await _connection.StartAsync();
+        }
+    }
+
+    public async Task UpdatePosition(double lat, double lng)
+    {
+        if (_module != null)
+        {
+            await _module.InvokeVoidAsync("updateMarker", lat, lng);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_connection is not null)
+        {
+            await _connection.DisposeAsync();
+        }
+    }
+}

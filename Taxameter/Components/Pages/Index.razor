@@ -1,0 +1,39 @@
+﻿@page "/"
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.SignalR.Client;
+
+@inject NavigationManager Navigation;
+
+<h1>Taxameter</h1>
+<p>Preis: @currentFare.Fare €</p>
+<p>Kilometer gefahren: @currentFare.KilometerDriven km</p>
+<p>Zeit gefahren: @currentFare.TimeDrivenMinutes min</p>
+<LiveMap />
+
+@code {
+    private FareInfo? currentFare = new ();
+    private HubConnection? connection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        connection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/taxameterHub"))
+            .Build();
+
+        connection.On<FareInfo>("FareUpdated", (fareInfo) =>
+        {
+            currentFare = fareInfo;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await connection.StartAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (connection is not null)
+        {
+            await connection.DisposeAsync();
+        }
+    }
+}
