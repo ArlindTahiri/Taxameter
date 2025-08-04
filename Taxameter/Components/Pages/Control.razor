@@ -1,19 +1,46 @@
 ﻿@page "/control"
-@using Microsoft.AspNetCore.SignalR.Client;
-@inject NavigationManager Navigation;
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject HttpClient Http
 @implements IAsyncDisposable
 
-<h1>Steuerung</h1>
-<p>Preis: @currentFare.Fare €</p>
-<p>Kilometer gefahren: @currentFare.KilometerDriven km</p>
-<p>Zeit gefahren: @currentFare.TimeDrivenMinutes min</p>
-<button @onclick="Start">Start</button>
-<button @onclick="Stop">Stopp</button>
-<button @onclick="Reset">Reset</button>
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-4">Fahrtsteuerung</h3>
 
-<LiveMap />
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Gesamtpreis:</span>
+                            <strong>@currentFare.Fare.ToString("0.00") €</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Kilometer gefahren:</span>
+                            <strong>@currentFare.KilometerDriven.ToString("0.00") km</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Fahrzeit:</span>
+                            <strong>@currentFare.TimeDrivenMinutes min</strong>
+                        </li>
+                    </ul>
+
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-success" @onclick="Start">Start</button>
+                        <button class="btn btn-danger" @onclick="Stop">Stopp</button>
+                        <button class="btn btn-secondary" @onclick="Reset">Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <LiveMap />
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private FareInfo? currentFare = new();
@@ -40,18 +67,19 @@
     private async Task Start()
     {
         await Http.PostAsync("/api/taxameter/start", null);
-
         await JS.InvokeVoidAsync("initTaxameterClient");
-    } 
+    }
 
     private async Task Stop()
     {
         await Http.PostAsync("/api/taxameter/stop", null);
-
         await JS.InvokeVoidAsync("stopTaxameterClient");
     }
 
-    private async Task Reset() => await Http.PostAsync("/api/taxameter/reset", null);
+    private async Task Reset()
+    {
+        await Http.PostAsync("/api/taxameter/reset", null);
+    }
 
     public async ValueTask DisposeAsync()
     {

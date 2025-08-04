@@ -1,17 +1,41 @@
 ﻿@page "/"
 @implements IAsyncDisposable
-@using Microsoft.AspNetCore.SignalR.Client;
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
 
-@inject NavigationManager Navigation;
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-4">Aktueller Fahrpreis</h3>
 
-<h1>Taxameter</h1>
-<p>Preis: @currentFare.Fare €</p>
-<p>Kilometer gefahren: @currentFare.KilometerDriven km</p>
-<p>Zeit gefahren: @currentFare.TimeDrivenMinutes min</p>
-<LiveMap />
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Gesamtpreis:</span>
+                            <strong>@currentFare.Fare.ToString("0.00") €</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Kilometer gefahren:</span>
+                            <strong>@currentFare.KilometerDriven.ToString("0.00") km</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Fahrzeit:</span>
+                            <strong>@currentFare.TimeDrivenMinutes min</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <LiveMap />
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-    private FareInfo? currentFare = new ();
+    private FareInfo? currentFare = new();
     private HubConnection? connection;
 
     protected override async Task OnInitializedAsync()

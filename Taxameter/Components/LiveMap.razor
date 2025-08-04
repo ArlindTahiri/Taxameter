@@ -1,15 +1,22 @@
 ﻿@using Microsoft.AspNetCore.SignalR.Client
 @inject NavigationManager Navigation
 @implements IAsyncDisposable
-
 @inject IJSRuntime JS
 
-<div id="map" style="height: 400px;"></div>
+<div class="card shadow-sm mt-4">
+    <div class="card-body p-0" style="border-radius: 0.5rem; overflow: hidden;">
+        <div id="map" style="height: 400px; width: 100%;"></div>
+    </div>
+    <div class="card-footer text-muted text-center small">
+        Zuletzt aktualisiert: @GetLastUpdatedMessage()
+    </div>
+</div>
 
 @code {
     private IJSObjectReference? _module;
-
     private HubConnection? _connection;
+    private DateTime? _lastUpdateTime;
+    private System.Timers.Timer? _refreshTimer;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -18,7 +25,6 @@
             _module = await JS.InvokeAsync<IJSObjectReference>("import", "./leafletInterop.js");
             await _module.InvokeVoidAsync("initMap");
 
-            // HubConnection aufbauen
             _connection = new HubConnectionBuilder()
                 .WithUrl(Navigation.ToAbsoluteUri("/taxameterHub"))
                 .Build();
@@ -26,11 +32,36 @@
             _connection.On<double, double, string>("LocationUpdated", async (lat, lng, timestamp) =>
             {
                 await UpdatePosition(lat, lng);
+
+                if (DateTime.TryParse(timestamp, out var parsed))
+                {
+                    _lastUpdateTime = parsed.ToLocalTime();
+                    await InvokeAsync(StateHasChanged); // sofort anzeigen
+                }
             });
 
-
             await _connection.StartAsync();
+
+            // 👇 Starte sekündlichen Refresh
+            _refreshTimer = new System.Timers.Timer(1000);
+            _refreshTimer.Elapsed += (_, _) => InvokeAsync(StateHasChanged);
+            _refreshTimer.Start();
         }
+    }
+
+    public string GetLastUpdatedMessage()
+    {
+        if (_lastUpdateTime == null)
+            return "Noch keine Daten erhalten.";
+
+        var secondsAgo = (DateTime.Now - _lastUpdateTime.Value).TotalSeconds;
+
+        if (secondsAgo < 60)
+            return $"Vor {Math.Floor(secondsAgo)} Sekunden";
+        if (secondsAgo < 3600)
+            return $"Vor {Math.Floor(secondsAgo / 60)} Minuten";
+
+        return _lastUpdateTime.Value.ToString("HH:mm:ss");
     }
 
     public async Task UpdatePosition(double lat, double lng)
@@ -44,8 +75,8 @@
     public async ValueTask DisposeAsync()
     {
         if (_connection is not null)
-        {
             await _connection.DisposeAsync();
-        }
+
+        _refreshTimer?.Dispose();
     }
 }
