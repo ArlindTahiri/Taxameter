@@ -15,9 +15,17 @@ namespace Taxameter.Controller
         }
 
         [HttpPost("start")]
-        public IActionResult Start()
+        public IActionResult Start([FromQuery] decimal? pricePerKm, [FromQuery] decimal? pricePerMinute)
         {
-            _service.Start();
+            if (pricePerKm.HasValue && pricePerMinute.HasValue)
+            {
+                _service.Start(pricePerKm.Value, pricePerMinute.Value);
+            }
+            else
+            {
+                _service.Start(); // Standardwerte
+            }
+
             return Ok();
         }
 

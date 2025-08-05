@@ -6,6 +6,10 @@ namespace Taxameter.Servies
 {
     public class TaxameterService
     {
+        private decimal _pricePerKm = 2.0m;      // Standardwert (optional)
+        private decimal _pricePerMinute = 0.5m;  // Standardwert (optional)
+
+
         private readonly IHubContext<TaxameterHub> _hubContext;
         private bool _isRunning = false;
 
@@ -26,10 +30,12 @@ namespace Taxameter.Servies
             _hubContext = hubContext;
         }
 
-        public void Start()
+        public void Start(decimal pricePerKm = 2.0m, decimal pricePerMinute = 0.5m)
         {
             if (_isRunning) return;
 
+            _pricePerKm = pricePerKm;
+            _pricePerMinute = pricePerMinute;
             _isRunning = true;
 
             _timer = new System.Timers.Timer(TimeSpan.FromMinutes(1).TotalMilliseconds);
@@ -66,7 +72,7 @@ namespace Taxameter.Servies
         // 50 cent per Minute
         private async void OnTimeElapsed()
         {
-            timeFare += 0.5m;
+            timeFare += _pricePerMinute;
             _timeDrivenMinutes += 1;
             await BroadcastFare();
         }
@@ -79,7 +85,7 @@ namespace Taxameter.Servies
             if (_lastLocation != null)
             {
                 var distanceKm = GetDistanceKm(_lastLocation.Value.lat, _lastLocation.Value.lng, lat, lng);
-                kilometerFare += (decimal)(distanceKm * 2.00); // z.B. 2 €/km
+                kilometerFare += (decimal)(distanceKm) * _pricePerKm;
                 _kilometerDriven += distanceKm;
                 await BroadcastFare();
             }
